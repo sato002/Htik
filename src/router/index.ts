@@ -1,22 +1,22 @@
-import { createWebHistory, createRouter } from "vue-router";
-import Home from "../components/Home.vue";
-import About from "../components/About.vue";
+import { createWebHashHistory, createWebHistory, createRouter } from "vue-router";
+import AppLayout from '../layout/AppLayout.vue';
 
 const routes = [
     {
-        path: "/home",
-        name: "Home",
-        component: Home,
-    },
-    {
-        path: "/about",
-        name: "About",
-        component: About,
+        path: '/',
+        component: AppLayout,
+        children: [
+            {
+                path: '/',
+                name: 'dashboard',
+                component: () => import('../views/Dashboard.vue')
+            }
+        ]
     },
 ];
 
 const router = createRouter({
-    history: createWebHistory(),
+    history: createWebHashHistory(),
     routes,
 });
 
