@@ -3,10 +3,12 @@ import { ref, onBeforeMount, reactive } from 'vue';
 import { FilterMatchMode, FilterOperator } from 'primevue/api';
 import { CustomerService } from '@/service/CustomerService';
 import { ProductService } from '@/service/ProductService';
+import { AccountService } from '@/service/AccountService';
 
 const customer1 = ref(null);
 const customer2 = ref(null);
 const customer3 = ref(null);
+const account = ref(null);
 const filters1 = ref(null);
 const loading1 = ref(null);
 const loading2 = ref(null);
@@ -29,6 +31,7 @@ const representatives = reactive([
 
 const customerService = new CustomerService();
 const productService = new ProductService();
+const accountService = new AccountService();
 
 const getBadgeSeverity = (inventoryStatus) => {
     switch (inventoryStatus.toLowerCase()) {
@@ -70,6 +73,12 @@ onBeforeMount(() => {
     });
     customerService.getCustomersLarge().then((data) => (customer2.value = data));
     customerService.getCustomersMedium().then((data) => (customer3.value = data));
+    
+    accountService.getAccounts().then((data) => {
+        debugger
+        account.value = data;
+    });
+
     loading2.value = false;
 
     initFilters1();
@@ -128,22 +137,24 @@ const calculateCustomerTotal = (name) => {
         <div class="col-12">
             <div class="card">
                 <DataTable
-                    :value="customer1"
-                    dataKey="id"
+                    :value="account"
                     :rowHover="true"
                     :scrollable="true" 
                     scrollHeight="400px"
                     scrollDirection="both"
-                    v-model:filters="filters1"
                     filterDisplay="menu"
                     :loading="loading1"
-                    :filters="filters1"
-                    :globalFilterFields="['name', 'country.name', 'representative.name', 'balance', 'status']"
+                    
                     showGridlines
                 >
                     <template #header>
                         <div class="flex justify-content-between flex-column sm:flex-row">
-                            <Button type="button" icon="pi pi-filter-slash" label="Clear" outlined @click="clearFilter1()" />
+                            <ButtonGroup>
+                                <Button label="Start" icon="pi pi-play" outlined/>
+                                <Button label="Add" icon="pi pi-plus" outlined/>
+                                <Button label="Delete" icon="pi pi-trash" outlined/>
+                                <Button label="Clear" icon="pi pi-filter-slash" outlined @click="clearFilter1()" />
+                            </ButtonGroup>
                             <IconField iconPosition="left">
                                 <InputIcon class="pi pi-search" />
                                 <InputText v-model="filters1['global'].value" placeholder="Keyword Search" style="width: 100%" />
@@ -152,58 +163,50 @@ const calculateCustomerTotal = (name) => {
                     </template>
                     <template #empty> No customers found. </template>
                     <template #loading> Loading customers data. Please wait. </template>
-                    <Column field="name" header="Name" frozen style="min-width: 12rem">
+                    <Column field="TDSUserName" header="TDS.UserName" frozen style="min-width: 12rem">
                         <template #body="{ data }">
-                            {{ data.name }}
-                        </template>
-                        <template #filter="{ filterModel }">
-                            <InputText type="text" v-model="filterModel.value" class="p-column-filter" placeholder="Search by name" />
+                            {{ data.TDS.Username }}
                         </template>
                     </Column>
-                    <Column header="Date" filterField="date" dataType="date" style="min-width: 10rem">
+                    <Column field="TDSPassword" header="TDS.Password">
                         <template #body="{ data }">
-                            {{ formatDate(data.date) }}
-                        </template>
-                        <template #filter="{ filterModel }">
-                            <Calendar v-model="filterModel.value" dateFormat="mm/dd/yy" placeholder="mm/dd/yyyy" />
+                            {{ data.TDS.Password }}
                         </template>
                     </Column>
-                    <Column header="Balance" filterField="balance" dataType="numeric" style="min-width: 10rem">
+                    <Column field="TDSToken" header="TDS.Token">
                         <template #body="{ data }">
-                            {{ formatCurrency(data.balance) }}
-                        </template>
-                        <template #filter="{ filterModel }">
-                            <InputNumber v-model="filterModel.value" mode="currency" currency="USD" locale="en-US" />
+                            {{ data.TDS.Token }}
                         </template>
                     </Column>
-                    <Column field="status" header="Status" :filterMenuStyle="{ width: '14rem' }" style="min-width: 12rem">
+                    <Column field="TiktokUsername" header="Tiktok.Username">
                         <template #body="{ data }">
-                            <Tag :severity="getSeverity(data.status)">{{ data.status.toUpperCase() }}</Tag>
-                        </template>
-                        <template #filter="{ filterModel }">
-                            <Dropdown v-model="filterModel.value" :options="statuses" placeholder="Any" class="p-column-filter" :showClear="true">
-                                <template #value="slotProps">
-                                    <Tag :severity="getSeverity(slotProps.value)" v-if="slotProps.value">{{ slotProps.value }} </Tag>
-                                    <span v-else>{{ slotProps.placeholder }}</span>
-                                </template>
-                                <template #option="slotProps">
-                                    <Tag :severity="getSeverity(slotProps.option)">{{ slotProps.option.toUpperCase() }}</Tag>
-                                </template>
-                            </Dropdown>
+                            {{ data.Tiktok.Username }}
                         </template>
                     </Column>
-                    <Column field="verified" header="Verified" dataType="boolean" bodyClass="text-center" style="min-width: 8rem">
+                    <Column field="TiktokPassword" header="Tiktok.Password">
                         <template #body="{ data }">
-                            <i class="pi" :class="{ 'text-green-500 pi-check-circle': data.verified, 'text-pink-500 pi-times-circle': !data.verified }"></i>
-                        </template>
-                        <template #filter="{ filterModel }">
-                            <TriStateCheckbox v-model="filterModel.value" />
+                            {{ data.Tiktok.Password }}
                         </template>
                     </Column>
-                    <Column frozen style="width: 15%">
-                        <template #header> View </template>
+                    <Column field="TDSXu" header="Xu">
+                        <template #body="{ data }">
+                            {{ data.TDS.Xu }}
+                        </template>
+                    </Column>
+                    <Column field="TDSXuThem" header="XuThem">
+                        <template #body="{ data }">
+                            {{ data.TDS.XuThem }}
+                        </template>
+                    </Column>
+                    <Column field="Message" header="Thông báo">
+                        <template #body="{ data }">
+                            {{ data.Message }}
+                        </template>
+                    </Column>
+                    <Column frozen alignFrozen="right" style="width: 15%">
+                        <template #header> Action </template>
                         <template #body>
-                            <Button icon="pi pi-search" type="button" class="p-button-text"></Button>
+                            <Button icon="pi pi-play" type="button" class="p-button-text" @click="clearFilter1()"></Button>
                         </template>
                     </Column>
                 </DataTable>
