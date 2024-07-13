@@ -2,18 +2,12 @@ import { join } from 'path';
 import {
     app,
     BrowserWindow,
-    ipcMain,
-    dialog
+    ipcMain
 } from 'electron';
+import { TDSWorker } from '../worker/TDSWorker';
+import { MyProfile } from '../model/MyProfile';
 
 const isDev = process.env.npm_lifecycle_event === "app:dev" ? true : false;
-
-async function handleFileOpen() {
-    const { canceled, filePaths } = await dialog.showOpenDialog({ title: "Open File" })
-    if (!canceled) {
-        return filePaths[0]
-    }
-}
 
 function createWindow() {
     // Create the browser window.
@@ -40,12 +34,20 @@ function createWindow() {
     // );
 }
 
+function TDSExecute() {
+    var mainWorker = new MyProfile();
+    mainWorker.create();
+}
+
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
-    ipcMain.handle('dialog:openFile', handleFileOpen)
+    ipcMain.handle('TDS:Execute', TDSExecute)
+
     createWindow()
+
     app.on('activate', function () {
         // On macOS it's common to re-create a window in the app when the
         // dock icon is clicked and there are no other windows open.
