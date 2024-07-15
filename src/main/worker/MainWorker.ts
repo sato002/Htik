@@ -1,9 +1,8 @@
 
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
-import {setTimeout} from "node:timers/promises";
 
-export class TDSWorker {
+export class MainWorker {
     constructor() {
         puppeteer.use(StealthPlugin());
     }

@@ -2,10 +2,10 @@ import { join } from 'path';
 import {
     app,
     BrowserWindow,
-    ipcMain
+    ipcMain,
+    IpcMainInvokeEvent
 } from 'electron';
-import { TDSWorker } from '../worker/TDSWorker';
-import { MyProfile } from '../model/MyProfile';
+import { ProfileService } from './service/ProfileService';
 
 const isDev = process.env.npm_lifecycle_event === "app:dev" ? true : false;
 
@@ -15,16 +15,16 @@ function createWindow() {
         width: 1280,
         height: 768,
         webPreferences: {
-            preload: join(__dirname, '../preload/preload.js'),
+            preload: join(__dirname, './preload.js'),
         },
     });
 
     // and load the index.html of the app.
     if (isDev) {
         mainWindow.loadURL('http://localhost:3000');// Open the DevTools.
-        
+
     } else {
-        mainWindow.loadFile(join(__dirname, '../../index.html'));
+        mainWindow.loadFile(join(__dirname, '../index.html'));
     }
     mainWindow.webContents.openDevTools();
     // mainWindow.loadURL( //this doesn't work on macOS in build and preview mode
@@ -34,20 +34,17 @@ function createWindow() {
     // );
 }
 
-function TDSExecute() {
-    var mainWorker = new MyProfile();
-    mainWorker.create();
-}
-
-
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+    // ipcMain Handle
     ipcMain.handle('TDS:Execute', TDSExecute)
 
+    // create window
     createWindow()
 
+    // app life cycle
     app.on('activate', function () {
         // On macOS it's common to re-create a window in the app when the
         // dock icon is clicked and there are no other windows open.
@@ -63,3 +60,12 @@ app.on('window-all-closed', () => {
         app.quit();
     }
 });
+
+
+
+// private method
+// event: IpcMainInvokeEvent, arg: string
+async function TDSExecute() {
+    var mainWorker = new ProfileService();
+    mainWorker.create();
+}
