@@ -6,6 +6,8 @@ import {
     IpcMainInvokeEvent
 } from 'electron';
 import { ProfileService } from './service/ProfileService';
+import { Profile } from './model/Profile';
+import { DatabaseService } from './service/DatabaseService';
 
 const isDev = process.env.npm_lifecycle_event === "app:dev" ? true : false;
 
@@ -16,11 +18,13 @@ function createWindow() {
         height: 768,
         webPreferences: {
             preload: join(__dirname, './preload.js'),
+            contextIsolation: true,
+            nodeIntegration: false,
         },
     });
 
     // and load the index.html of the app.
-    if (isDev) {
+    if (isDev || true) {
         mainWindow.loadURL('http://localhost:3000');// Open the DevTools.
 
     } else {
@@ -40,6 +44,12 @@ function createWindow() {
 app.whenReady().then(() => {
     // ipcMain Handle
     ipcMain.handle('TDS:Execute', TDSExecute)
+
+    ipcMain.handle('ipcMain:createProfile', createProfile)
+    ipcMain.handle('ipcMain:getAllProfiles', getAllProfiles)
+
+    const dbService = DatabaseService.getInstance();
+    dbService.initialize();
 
     // create window
     createWindow()
@@ -61,11 +71,29 @@ app.on('window-all-closed', () => {
     }
 });
 
-
-
+const _profileService = new ProfileService();
 // private method
 // event: IpcMainInvokeEvent, arg: string
 async function TDSExecute() {
     var mainWorker = new ProfileService();
-    mainWorker.create();
+    // mainWorker.create();
+}
+
+async function createProfile(event: IpcMainInvokeEvent, profile: Profile) {
+    try {
+        const id = await _profileService.create(profile);
+        return { success: true, data: id};
+    } catch (error) {
+        return { success: false, error: (error as Error).message };
+    }
+}
+
+async function getAllProfiles(event: IpcMainInvokeEvent) {
+    try {
+        const profiles = await _profileService.getAll();
+        return { success: true, data: JSON.stringify(profiles)};
+    } catch (error) {
+        return { success: false, error: (error as Error).message };
+    }
+    
 }

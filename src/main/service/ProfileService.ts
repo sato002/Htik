@@ -5,6 +5,7 @@ import path from 'path'
 import { app } from 'electron';
 import { v4 as uuidv4 } from 'uuid';
 import { DatabaseService } from './DatabaseService';
+import { Profile } from '../model/Profile';
 
 const DEFAULT_VIEWPORT = {
     width: 1280,
@@ -13,13 +14,24 @@ const DEFAULT_VIEWPORT = {
 
 export class ProfileService {
     private browser?: Browser
+    private dbService = DatabaseService.getInstance();
+
 
     constructor() {
         puppeteer.use(StealthPlugin());
     }
 
-    async create() {
-        const profileID = uuidv4();
+    async create(profile: Profile) {
+        // await this.createChromiumProfile(profile.id);
+       
+        return this.dbService.createProfile(profile);
+    }
+
+    async getAll() {
+        return this.dbService.getAllProfiles();
+    }
+
+    private async createChromiumProfile(profileID: string) {
         const executablePath = path.join(__dirname, 'resouce','125', 'chrome.exe');
         const dataPath = path.join(app.getPath('userData'), 'profile_saved', profileID);
 
@@ -32,28 +44,14 @@ export class ProfileService {
             ignoreDefaultArgs: ['--enable-automation', '--disable-extensions', '--enable-blink-features=IdleDetection']
         })
         .then(async browser => {
-            this.browser = browser;
-            const page = await browser.newPage()
-                await page.goto('https://traodoisub.com')
+            // this.browser = browser;
+            // const page = await browser.newPage()
+            //     await page.goto('https://traodoisub.com')
                 // await setTimeout(5000);
                 // await page.screenshot({ path: 'stealth.png', fullPage: true })
                 // await browser.close()
 
-            const db = DatabaseService.getInstance();
-            db.saveProfile(profileID);
+            
         });
-        
-    }
-
-    async getList() {
-
-    }
-
-    async getDetail() {
-
-    }
-
-    async delete() {
-
     }
 }

@@ -1,5 +1,8 @@
 import { contextBridge, ipcRenderer } from "electron";
+import { Profile } from "./model/Profile";
 
-contextBridge.exposeInMainWorld('electronAPI', {
-    Execute: () => ipcRenderer.invoke('TDS:Execute')
+contextBridge.exposeInMainWorld('electron', {
+    execute: () => ipcRenderer.invoke('TDS:Execute'),
+    createProfile: (profile: Profile) => ipcRenderer.invoke('ipcMain:createProfile', profile),
+    getAllProfiles: () => ipcRenderer.invoke('ipcMain:getAllProfiles')
 })

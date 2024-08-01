@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ref, onBeforeMount, reactive } from 'vue';
-import { FilterMatchMode, FilterOperator } from 'primevue/api';
-import { AccountService } from '@/service/AccountService';
+import { ref, onBeforeMount } from 'vue';
 import { ExtraColumn } from '@/model/ExtraColumn';
+import { Profile } from '../../main/model/Profile';
+import { v4 as uuidv4 } from 'uuid';
+import { useToast } from 'primevue/usetoast';
+
+const toast = useToast();
 
 const extraColumns = ref<ExtraColumn[]>([
     new ExtraColumn('TDSPassword','TDS.Mật khẩu'),
@@ -11,17 +14,16 @@ const extraColumns = ref<ExtraColumn[]>([
 ]);
 const selectedExtraColumns = ref<ExtraColumn[]>([]);
 
-const accounts = ref(null);
-const loadingAccount = ref(true);
+const profilesModel = ref<Profile[]>([]);
+const loadingProfile = ref(true);
 const selectedAccounts = ref();
 
-const accountService = new AccountService();
+const isShowCreateProfilePopup = ref(false);
+
+const profileInPopupModel = ref<Profile>(new Profile());
 
 onBeforeMount(() => {
-    accountService.getAccounts().then((data) => {
-        loadingAccount.value = false;
-        accounts.value = data;
-    });
+    fetchProfiles();
 });
 
 const onToggleExtraColumns = (val) => {
@@ -33,9 +35,41 @@ const isShowColumn = (columnName) => {
     return exists;
 };
 
-const execute = () => {
-    window.electronAPI.Execute();
+const resetCreateProfilePopup = () => {
+    profileInPopupModel.value = new Profile();
+}
+
+const fetchProfiles = async () => {
+    const result = await window.electron.getAllProfiles();
+    debugger
+    if (result.success) {
+        const profiles = JSON.parse(result.data) as Profile[];
+        profilesModel.value = profiles;
+        loadingProfile.value = false;
+    } else {
+        console.error('Error fetching profiles:', result.error);
+    }
 };
+
+const execute = () => {
+    window.electron.execute();
+};
+
+const saveProfile = async () => {
+    console.log(profileInPopupModel.value);
+    const profileInPopup = profileInPopupModel.value;
+    profileInPopup.guidId = uuidv4();
+    const result = await window.electron.createProfile({...profileInPopup});
+    if (result.success) {
+        profileInPopup.id = result.data;
+        profilesModel.value.push(profileInPopup);
+        isShowCreateProfilePopup.value = false;
+        resetCreateProfilePopup();
+        toast.add({ severity: 'success', summary: 'Thành công', detail: 'Thêm hồ sơ thành công!', life: 3000 });
+    } else {
+        console.error('Error fetching profiles:', result.error);
+    }
+}
 
 </script>
 
@@ -52,11 +86,11 @@ const execute = () => {
                     selectionMode="multiple"
                     :rowHover="true"
                     :scrollable="true" 
-                    :loading="loadingAccount"
+                    :loading="loadingProfile"
                     resizableColumns 
                     columnResizeMode="expand"
 
-                    :value="accounts"
+                    :value="profilesModel"
                     v-model:selection="selectedAccounts"
                 >
                     <template #header>
@@ -64,7 +98,7 @@ const execute = () => {
                             <ButtonGroup>
                                 <Button label="Bắt dầu" icon="pi pi-play" outlined @click="execute()"/>
                                 <Button label="Kết thúc" icon="pi pi-stop" outlined/>
-                                <Button label="Tạo Profile" icon="pi pi-plus" outlined/>
+                                <Button label="Tạo Profile" icon="pi pi-plus" outlined @click="isShowCreateProfilePopup = true"/>
                                 <Button label="Xóa Profile" icon="pi pi-trash" outlined/>
                             </ButtonGroup>
 
@@ -83,47 +117,47 @@ const execute = () => {
                     <Column selectionMode="multiple" frozen headerStyle="width: 3rem" ></Column>
                     <Column field="TDSUserName" header="TDS.Tài khoản" frozen>
                         <template #body="{ data }">
-                            {{ data.TDS.Username }}
+                            {{ data.tdsUsername }}
                         </template>
                     </Column>
                     <Column field="TDSPassword" header="TDS.Mật khẩu" v-if="isShowColumn('TDSPassword')">
                         <template #body="{ data }">
-                            {{ data.TDS.Password }}
+                            {{ data.tdsPassword }}
                         </template>
                     </Column>
                     <Column field="TDSToken" header="TDS.Token" v-if="isShowColumn('TDSPassword')">
                         <template #body="{ data }">
-                            {{ data.TDS.Token }}
+                            {{ data.tdsToken }}
                         </template>
                     </Column>
                     <Column field="TiktokUsername" header="Tik.Tài khoản">
                         <template #body="{ data }">
-                            {{ data.Tiktok.Username }}
+                            {{ data.tikUsername }}
                         </template>
                     </Column>
                     <Column field="TiktokPassword" header="Tik.Mật khẩu" v-if="isShowColumn('TDSPassword')">
                         <template #body="{ data }">
-                            {{ data.Tiktok.Password }}
+                            {{ data.tikPassword }}
                         </template>
                     </Column>
                     <Column field="TDSXu" header="Xu" sortable>
                         <template #body="{ data }">
-                            {{ data.TDS.Xu }}
+                            {{ data.tdsTotalCoin }}
                         </template>
                     </Column>
                     <Column field="TDSXuCuoi" header="Xu cuối" sortable>
                         <template #body="{ data }">
-                            {{ data.TDS.XuThem }}
+                            {{ data.tdsTotalCoinJustEarned }}
                         </template>
                     </Column>
                     <Column field="TDSXuThem" header="Xu thêm" sortable>
                         <template #body="{ data }">
-                            {{ data.TDS.XuThem }}
+                            {{ data.tdsCoinJustEarned }}
                         </template>
                     </Column>
                     <Column field="Message" header="Thông báo" frozen alignFrozen="right" style="width: 25%">
                         <template #body="{ data }">
-                            {{ data.Message }}
+                            <!-- {{ data.Message }} -->
                         </template>
                     </Column>
                     <Column header="Chức năng" frozen alignFrozen="right" style="width: 5%">
@@ -132,6 +166,40 @@ const execute = () => {
                         </template>
                     </Column>
                 </DataTable>
+
+                <Dialog v-model:visible="isShowCreateProfilePopup" :style="{ width: '50vw' }" header="Tạo mới profile" :modal="true" class="p-fluid">
+                    <div class="formgrid grid">
+                        <div class="field col">
+                            <label for="tdsUsername">TDS.Tài khoản</label>
+                            <InputText id="tdsUsername" required="true" autofocus v-model.trim="profileInPopupModel.tdsUsername" />
+                        </div>
+                        <div class="field col">
+                            <label for="tdsPassword">TDS.Mật khẩu</label>
+                            <InputText id="tdsPassword"  required="true" v-model.trim="profileInPopupModel.tdsPassword" />
+                        </div>
+                        
+                    </div>
+                    <div class="field">
+                            <label for="tdsToken">TDS.Token</label>
+                            <InputText id="tdsToken"  required="true" v-model.trim="profileInPopupModel.tdsToken" />
+                        </div>
+                    
+
+                    <div class="formgrid grid">
+                        <div class="field col">
+                            <label for="tikUsername">Tik.Tài khoản</label>
+                            <InputText id="tikUsername"  required="true" v-model.trim="profileInPopupModel.tikUsername"/>
+                        </div>
+                        <div class="field col">
+                            <label for="tikPassword">Tik.Mật khẩu</label>
+                            <InputText id="tikPassword"  required="true" v-model.trim="profileInPopupModel.tikPassword" />
+                        </div>
+                    </div>
+                    <template #footer>
+                        <Button label="Cancel" icon="pi pi-times" text="" @click="isShowCreateProfilePopup = false" />
+                        <Button label="Save" icon="pi pi-check" text="" @click="saveProfile" />
+                    </template>
+                </Dialog>
             </div>
         </div>
     </div>
